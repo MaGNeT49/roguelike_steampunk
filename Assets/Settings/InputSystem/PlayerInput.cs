@@ -120,20 +120,18 @@ namespace RoguelikeSteampunk
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Look"",
+                    ""type"": ""Value"",
+                    ""id"": ""639aa6ac-c259-44d1-8675-ef5000caa722"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
                 }
             ],
             ""bindings"": [
-                {
-                    ""name"": """",
-                    ""id"": ""7612081b-eade-43d7-943d-bf3779facf50"",
-                    ""path"": ""<Gamepad>/leftStick"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": "";Gamepad"",
-                    ""action"": ""Move"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
                 {
                     ""name"": ""2D Vector"",
                     ""id"": ""54e53e41-f0da-46d1-8282-3b12d68a057e"",
@@ -191,6 +189,17 @@ namespace RoguelikeSteampunk
                 },
                 {
                     ""name"": """",
+                    ""id"": ""7612081b-eade-43d7-943d-bf3779facf50"",
+                    ""path"": ""<Gamepad>/leftStick"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Gamepad"",
+                    ""action"": ""Move"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""c64b9a9f-1799-43f3-950b-b9755302a316"",
                     ""path"": ""<Keyboard>/space"",
                     ""interactions"": """",
@@ -232,6 +241,28 @@ namespace RoguelikeSteampunk
                     ""action"": ""Run"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b2d211e2-b0da-4cfd-911d-8c6e287a02d7"",
+                    ""path"": ""<Mouse>/delta"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""Look"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""6f01c272-a2c7-47b5-9f5a-d85907247dfc"",
+                    ""path"": ""<Gamepad>/rightStick"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Gamepad"",
+                    ""action"": ""Look"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -271,6 +302,7 @@ namespace RoguelikeSteampunk
             m_Game_Move = m_Game.FindAction("Move", throwIfNotFound: true);
             m_Game_Jump = m_Game.FindAction("Jump", throwIfNotFound: true);
             m_Game_Run = m_Game.FindAction("Run", throwIfNotFound: true);
+            m_Game_Look = m_Game.FindAction("Look", throwIfNotFound: true);
         }
 
         ~@PlayerInput()
@@ -354,6 +386,7 @@ namespace RoguelikeSteampunk
         private readonly InputAction m_Game_Move;
         private readonly InputAction m_Game_Jump;
         private readonly InputAction m_Game_Run;
+        private readonly InputAction m_Game_Look;
         /// <summary>
         /// Provides access to input actions defined in input action map "Game".
         /// </summary>
@@ -377,6 +410,10 @@ namespace RoguelikeSteampunk
             /// Provides access to the underlying input action "Game/Run".
             /// </summary>
             public InputAction @Run => m_Wrapper.m_Game_Run;
+            /// <summary>
+            /// Provides access to the underlying input action "Game/Look".
+            /// </summary>
+            public InputAction @Look => m_Wrapper.m_Game_Look;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -412,6 +449,9 @@ namespace RoguelikeSteampunk
                 @Run.started += instance.OnRun;
                 @Run.performed += instance.OnRun;
                 @Run.canceled += instance.OnRun;
+                @Look.started += instance.OnLook;
+                @Look.performed += instance.OnLook;
+                @Look.canceled += instance.OnLook;
             }
 
             /// <summary>
@@ -432,6 +472,9 @@ namespace RoguelikeSteampunk
                 @Run.started -= instance.OnRun;
                 @Run.performed -= instance.OnRun;
                 @Run.canceled -= instance.OnRun;
+                @Look.started -= instance.OnLook;
+                @Look.performed -= instance.OnLook;
+                @Look.canceled -= instance.OnLook;
             }
 
             /// <summary>
@@ -519,6 +562,13 @@ namespace RoguelikeSteampunk
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnRun(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Look" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnLook(InputAction.CallbackContext context);
         }
     }
 }

@@ -12,10 +12,12 @@ namespace RoguelikeSteampunk.StateMachine
 
         private int _isWalkingHash;
         private int _isRunningHash;
+        private int _isFallingHash;
 
         private Vector2 _currentMovementInput;
         private Vector3 _currentMovement;
         private Vector3 _appliedMovement;
+        private Vector3 _cameraRelativeMovement;
         private bool _isMovementPressed;
         private bool _isRunPressed;
 
@@ -23,7 +25,6 @@ namespace RoguelikeSteampunk.StateMachine
         private float _runMultiplier = 4.0f;
 
         private float _gravity = -9.8f;
-        private float _groundedGravity = -0.05f;
 
         private bool _isJumpPressed;
         private float _initialJumpVelocity;
@@ -41,64 +42,28 @@ namespace RoguelikeSteampunk.StateMachine
         private PlayerBaseState _currentState;
         private PlayerStateFactory _states;
 
-        public PlayerBaseState CurrentState
-        {
-            get => _currentState;
-            set => _currentState = value;
-        }
-
-        public Animator Animator => _animator;
-
-        public Coroutine CurrentJumpResetRoutine
-        {
-            get => _currentJumpResetRoutine;
-            set => _currentJumpResetRoutine = value;
-        }
-
-        public Dictionary<int, float> InitialJumpVelocities => _initialJumpVelocities;
-
-        public int JumpCount
-        {
-            get => _jumpCount;
-            set => _jumpCount = value;
-        }
-
-        public int IsJumpingHash => _isJumpingHash;
-
-        public int JumpCountHash => _jumpCountHash;
-
-        public bool RequireNewJumpPress
-        {
-            get => _requireNewJumpPress;
-            set => _requireNewJumpPress = value;
-        }
-
-        public bool IsJumping
-        {
-            set => _isJumping = value;
-        }
-
-        public bool IsJumpPressed => _isJumpPressed;
-
-        public float CurrentMovementY
-        {
-            get => _currentMovement.y;
-            set => _currentMovement.y = value;
-        }
-
-        public float AppliedMovementY
-        {
-            get => _appliedMovement.y;
-            set => _appliedMovement.y = value;
-        }
+        private Camera _camera;
 
         public CharacterController CharacterController => _characterController;
-        public float GroundedGravity => _groundedGravity;
+        public PlayerBaseState CurrentState { get => _currentState; set => _currentState = value; }
+        public Animator Animator => _animator;
+        public Coroutine CurrentJumpResetRoutine { get => _currentJumpResetRoutine; set => _currentJumpResetRoutine = value; }
+        public Dictionary<int, float> InitialJumpVelocities => _initialJumpVelocities;
         public Dictionary<int, float> JumpGravities => _jumpGravities;
+        public int JumpCount { get => _jumpCount; set => _jumpCount = value; }
+        public bool RequireNewJumpPress { get => _requireNewJumpPress; set => _requireNewJumpPress = value; }
+        public bool IsJumping { set => _isJumping = value; }
+        public bool IsJumpPressed => _isJumpPressed;
+        public float CurrentMovementY { get => _currentMovement.y; set => _currentMovement.y = value; }
+        public float AppliedMovementY { get => _appliedMovement.y; set => _appliedMovement.y = value; }
+        public float Gravity => _gravity;
         public bool IsMovementPressed => _isMovementPressed;
         public bool IsRunPressed => _isRunPressed;
         public int IsWalkingHash => _isWalkingHash;
         public int IsRunningHash => _isRunningHash;
+        public int IsFallingHash => _isFallingHash;
+        public int IsJumpingHash => _isJumpingHash;
+        public int JumpCountHash => _jumpCountHash;
 
         public float AppliedMovementX
         {
@@ -117,6 +82,7 @@ namespace RoguelikeSteampunk.StateMachine
 
         private void Awake()
         {
+            _camera = Camera.main;
             _playerInput = new PlayerInput();
             _characterController = GetComponent<CharacterController>();
             _animator = GetComponent<Animator>();
@@ -125,25 +91,59 @@ namespace RoguelikeSteampunk.StateMachine
             _currentState = _states.Grounded();
             _currentState.EnterState();
 
-            _isWalkingHash = Animator.StringToHash("isWalking");
-            _isRunningHash = Animator.StringToHash("isRunning");
-            _isJumpingHash = Animator.StringToHash("isJumping");
-            _jumpCountHash = Animator.StringToHash("jumpCount");
-
+            SetupAnimatorHash();
             SetupJumpVariables();
+        }
+
+        private void Start()
+        {
+            _characterController.Move(_appliedMovement * Time.deltaTime);
         }
 
         private void Update()
         {
             HandleRotation();
             _currentState.UpdateStates();
-            _characterController.Move(_appliedMovement * Time.deltaTime);
+
+            _cameraRelativeMovement = ConvertToCameraSpace(_appliedMovement);
+            _characterController.Move(_cameraRelativeMovement * Time.deltaTime);
+        }
+
+        private Vector3 ConvertToCameraSpace(Vector3 vectorToRotate)
+        {
+            float currentYValue = vectorToRotate.y;
+            
+            Vector3 cameraForward = _camera.transform.forward;
+            Vector3 cameraRight = _camera.transform.right;
+
+            cameraForward.y = 0;
+            cameraRight.y = 0;
+
+            cameraForward = cameraForward.normalized;
+            cameraRight = cameraRight.normalized;
+
+            Vector3 cameraForwardZProduct = vectorToRotate.z * cameraForward;
+            Vector3 cameraRightXProduct = vectorToRotate.x * cameraRight;
+
+            Vector3 vectorRotatedToCameraSpace = cameraForwardZProduct + cameraRightXProduct;
+            vectorRotatedToCameraSpace.y = currentYValue;
+            
+            return vectorRotatedToCameraSpace;
+        }
+
+        private void SetupAnimatorHash()
+        {
+            _isWalkingHash = Animator.StringToHash("isWalking");
+            _isRunningHash = Animator.StringToHash("isRunning");
+            _isJumpingHash = Animator.StringToHash("isJumping");
+            _jumpCountHash = Animator.StringToHash("jumpCount");
+            _isFallingHash = Animator.StringToHash("isFalling");
         }
 
         private void SetupJumpVariables()
         {
             var timeToApex = _maxJumpTime / 2;
-            _gravity = (-2 * _maxJumpHeight) / Mathf.Pow(timeToApex, 2);
+            float initialGravity = (-2 * _maxJumpHeight) / Mathf.Pow(timeToApex, 2);
             _initialJumpVelocity = (2 * _maxJumpHeight) / timeToApex;
             var secondJumpGravity = (-2 * (_maxJumpHeight + 2)) / Mathf.Pow(timeToApex * 1.25f, 2);
             var secondJumpInitialVelocity = (2 * (_maxJumpHeight + 2)) / (timeToApex * 1.25f);
@@ -154,15 +154,15 @@ namespace RoguelikeSteampunk.StateMachine
             _initialJumpVelocities.Add(2, secondJumpInitialVelocity);
             _initialJumpVelocities.Add(3, thirdJumpInitialVelocity);
 
-            _jumpGravities.Add(0, _gravity);
-            _jumpGravities.Add(1, _gravity);
+            _jumpGravities.Add(0, initialGravity);
+            _jumpGravities.Add(1, initialGravity);
             _jumpGravities.Add(2, secondJumpGravity);
             _jumpGravities.Add(3, thirdJumpGravity);
         }
 
         private void HandleRotation()
         {
-            var positionToLookAt = new Vector3(_currentMovementInput.x, 0, _currentMovementInput.y);
+            var positionToLookAt = new Vector3(_cameraRelativeMovement.x, 0, _cameraRelativeMovement.z);
 
             var currentRotation = transform.rotation;
 

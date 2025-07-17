@@ -3,13 +3,12 @@ using UnityEngine;
 
 namespace RoguelikeSteampunk.StateMachine
 {
-    public class PlayerJumpState : PlayerBaseState
+    public class PlayerJumpState : PlayerBaseState, IRootState
     {
         public PlayerJumpState(PlayerStateMachine context, PlayerStateFactory playerStateFactory) : base(context,
             playerStateFactory)
         {
             IsRootState = true;
-            InitializeSubState();
         }
 
         private IEnumerator IJumpResetRoutine()
@@ -21,13 +20,14 @@ namespace RoguelikeSteampunk.StateMachine
 
         public override void EnterState()
         {
+            InitializeSubState();
             HandleJump();
         }
 
         public override void UpdateState()
         {
-            CheckSwitchStates();
             HandleGravity();
+            CheckSwitchStates();
         }
 
         public override void ExitState()
@@ -38,6 +38,7 @@ namespace RoguelikeSteampunk.StateMachine
                 Ctx.RequireNewJumpPress = true;
             
             Ctx.CurrentJumpResetRoutine = Ctx.StartCoroutine(IJumpResetRoutine());
+            
             if (Ctx.JumpCount == 3)
             {
                 Ctx.JumpCount = 0;
@@ -48,33 +49,23 @@ namespace RoguelikeSteampunk.StateMachine
         public override void CheckSwitchStates()
         {
             if (Ctx.CharacterController.isGrounded)
-            {
                 SwitchState(Factory.Grounded());
-            }
         }
 
         public override void InitializeSubState()
         {
             if (!Ctx.IsMovementPressed && !Ctx.IsRunPressed)
-            {
                 SetSubState(Factory.Idle());
-            }
             else if (Ctx.IsMovementPressed && !Ctx.IsRunPressed)
-            {
                 SetSubState(Factory.Walk());
-            }
             else
-            {
                 SetSubState(Factory.Run());
-            }
         }
 
         private void HandleJump()
         {
             if (Ctx.JumpCount < 3 && Ctx.CurrentJumpResetRoutine != null)
-            {
                 Ctx.StopCoroutine(Ctx.CurrentJumpResetRoutine);
-            }
 
             Ctx.Animator.SetBool(Ctx.IsJumpingHash, true);
             Ctx.IsJumping = true;
@@ -84,7 +75,7 @@ namespace RoguelikeSteampunk.StateMachine
             Ctx.AppliedMovementY = Ctx.InitialJumpVelocities[Ctx.JumpCount];
         }
 
-        private void HandleGravity()
+        public void HandleGravity()
         {
             bool isFalling = Ctx.CurrentMovementY <= 0.0f || !Ctx.IsJumpPressed;
             float fallMultiplier = 2.0f;

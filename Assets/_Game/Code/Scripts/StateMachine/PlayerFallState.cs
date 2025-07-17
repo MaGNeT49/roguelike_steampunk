@@ -1,9 +1,11 @@
+using UnityEngine;
+
 namespace RoguelikeSteampunk.StateMachine
 {
-    public class PlayerGroundedState : PlayerBaseState, IRootState
+    public class PlayerFallState : PlayerBaseState, IRootState
     {
-        public PlayerGroundedState(PlayerStateMachine context, PlayerStateFactory playerStateFactory) : base(context,
-            playerStateFactory)
+        public PlayerFallState(PlayerStateMachine currentContext, PlayerStateFactory playerStateFactory) : base(
+            currentContext, playerStateFactory)
         {
             IsRootState = true;
         }
@@ -11,50 +13,42 @@ namespace RoguelikeSteampunk.StateMachine
         public override void EnterState()
         {
             InitializeSubState();
-            HandleGravity();
+            Ctx.Animator.SetBool(Ctx.IsFallingHash, true);
         }
 
         public override void UpdateState()
         {
+            HandleGravity();
             CheckSwitchStates();
         }
 
         public override void ExitState()
         {
+            Ctx.Animator.SetBool(Ctx.IsFallingHash, false);
         }
 
         public override void CheckSwitchStates()
         {
-            if (Ctx.IsJumpPressed && !Ctx.RequireNewJumpPress)
-            {
-                SwitchState(Factory.Jump());
-            }
-            else if (!Ctx.CharacterController.isGrounded)
-            {
-                SwitchState(Factory.Fall());
-            }
+            if (Ctx.CharacterController.isGrounded)
+                SwitchState(Factory.Grounded());
         }
 
         public override void InitializeSubState()
         {
             if (!Ctx.IsMovementPressed && !Ctx.IsRunPressed)
-            {
                 SetSubState(Factory.Idle());
-            }
             else if (Ctx.IsMovementPressed && !Ctx.IsRunPressed)
-            {
                 SetSubState(Factory.Walk());
-            }
             else
-            {
                 SetSubState(Factory.Run());
-            }
         }
-
+        
         public void HandleGravity()
         {
-            Ctx.CurrentMovementY = Ctx.Gravity;
-            Ctx.AppliedMovementY = Ctx.Gravity;
+            float previousYVelocity = Ctx.CurrentMovementY;
+            
+            Ctx.CurrentMovementY = Ctx.CurrentMovementY + Ctx.Gravity * Time.deltaTime;
+            Ctx.AppliedMovementY = Mathf.Max((previousYVelocity + Ctx.CurrentMovementY) * 0.5f, -20.0f);
         }
     }
 }
